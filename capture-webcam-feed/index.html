@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <video autoplay style="width: 640px; height: 480px;"></video>
+    <div>
+      <button onclick="takeASnapBtnEvent()">snap</button>
+      <button id="rec">rec</button>
+    </div>
+  </body>
+</html>
+<script>
+  const vid = document.querySelector("video");
+
+  const options = {
+    video: true,
+  };
+
+  navigator.mediaDevices
+    .getUserMedia(options)
+    .then((stream) => {
+      vid.srcObject = stream;
+    })
+    .catch((err) => {
+      console.log("error");
+    });
+
+  const takeASnapBtnEvent = () => {
+    takeASnap().then(download);
+  };
+
+  // Create Snapshot
+  const takeASnap = () => {
+    console.log("snap");
+    const canvas = document.createElement("canvas"); // create a canvas
+    const ctx = canvas.getContext("2d"); // get its context
+    canvas.width = vid.videoWidth; // set its size to the one of the video
+    canvas.height = vid.videoHeight;
+    ctx.drawImage(vid, 0, 0); // the video
+    return new Promise((res, rej) => {
+      canvas.toBlob(res, "image/jpeg"); // request a Blob from the canvas
+    });
+  };
+
+  const download = (blob) => {
+    // uses the <a download> to download a Blob
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "screenshot.jpg";
+    document.body.appendChild(a);
+    a.click();
+  };
+</script>
+
+<script>
+  const vidrec = document.querySelector("video");
+  navigator.mediaDevices
+    .getUserMedia({ video: true }) // request cam
+    .then((stream) => {
+        vidrec.srcObject = stream; // don't use createObjectURL(MediaStream)
+      return vidrec.play(); // returns a Promise
+    })
+    .then(() => {
+      // enable the button
+      const btn = document.getElementById("rec");
+      btn.disabled = false;
+      btn.onclick = startRecording;
+    })
+    .catch((e) => console.log("please use the fiddle instead"));
+
+  function startRecording() {
+    // switch button's behavior
+    const btn = this;
+    btn.textContent = "stop recording";
+    btn.onclick = stopRecording;
+
+    const chunks = []; // here we will save all video data
+    const rec = new MediaRecorder(vidrec.srcObject);
+    // this event contains our data
+    rec.ondataavailable = (e) => chunks.push(e.data);
+    // when done, concatenate our chunks in a single Blob
+    rec.onstop = (e) => saveVid(new Blob(chunks));
+    rec.start();
+    function stopRecording() {
+      rec.stop();
+      // switch button's behavior
+      btn.textContent = "start recording";
+      btn.onclick = startRecording;
+    }
+  }
+  function saveVid(blob) {
+    // uses the <a download> to download a Blob
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "recorded.webm";
+    document.body.appendChild(a);
+    a.click();
+  }
+</script>
